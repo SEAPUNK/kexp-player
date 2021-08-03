@@ -290,7 +290,7 @@
   
   // every 3 hours or so, the livestream stops, so we just refresh the url every 1.5 hours
   function refreshPlayer() {
-    player.stop()
+    player.pause()
     player.src = getStreamURL();
     player.play()
   }
