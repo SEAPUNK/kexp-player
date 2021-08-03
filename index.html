@@ -163,7 +163,6 @@
     return `https://api.kexp.org/v2/${path}?${searchParams.toString()}`;
   }
 
-  player.src = getStreamURL();
 
   async function fetchShows() {
     let res = await fetch(getAPIEndpoint('shows', {
@@ -288,6 +287,15 @@
   enableNotificationsButton.onclick = async () => {
     await Notification.requestPermission();
   }
+  
+  // every 3 hours or so, the livestream stops, so we just refresh the url every 1.5 hours
+  function refreshPlayer() {
+    player.stop()
+    player.src = getStreamURL();
+    player.play()
+  }
+  setInterval(refreshPlayer, 1000 * 60 * 60 * 1.5);
+  refreshPlayer();
 </script>
 
 </body>
