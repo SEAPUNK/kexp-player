@@ -13,7 +13,7 @@ https://ivan.moe/kexp/
 
 ---
 
-eventually (maybe, maybe not)
+eventually (maybe, maybe not, open a pr if you want it)
 
 - play history
 - link to show
