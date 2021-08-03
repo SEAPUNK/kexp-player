@@ -185,10 +185,10 @@
 
   function extractPlayMetadata(play) {
     let metadata = {
-      title: play.song ?? '',
-      artist: play.artist ?? '',
+      title: play.song || '',
+      artist: play.artist || '',
       artistUrl: '',
-      artworkUrl: play.thumbnail_uri ?? null,
+      artworkUrl: play.thumbnail_uri || null,
       program: '',
       release: '',
       airdate: play.airdate != null ? (new Date(play.airdate)) : null,
@@ -199,7 +199,7 @@
     if (['airbreak', 'Air Break', 'air break'].includes(play.play_type)) {
       metadata.release = AIR_BREAK;
     } else {
-      metadata.release = play.album ?? '';
+      metadata.release = play.album || '';
     }
 
     return metadata;
@@ -260,7 +260,7 @@
       song.style.visibility = 'shown';
       nowPlayingText = `${nowPlaying.artist} - ${nowPlaying.title}`;
     }
-    let artworkUrl = nowPlaying.artworkUrl ?? PLACEHOLDER_ARTWORK;
+    let artworkUrl = nowPlaying.artworkUrl || PLACEHOLDER_ARTWORK;
     artwork.src = artworkUrl
     bg.style['background-image'] = `url(${artworkUrl})`;
     
