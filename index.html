@@ -283,7 +283,10 @@
   updateTitle();
 
   updateButton.onclick = updateTitle;
-
+  
+  if (Notification.permission === 'granted') {
+    enableNotificationsButton.style.display = 'none';
+  }
   enableNotificationsButton.onclick = async () => {
     await Notification.requestPermission();
   }
