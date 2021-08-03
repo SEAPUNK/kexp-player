@@ -1,0 +1,293 @@
+<!doctype html>
+
+<head>
+  <title>KEXP</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: black;
+      color: #EEE;
+
+      font-size: 1.2rem;
+      line-height: 1.5rem;
+
+      margin: 0;
+      padding: 0;
+      
+      min-height: 100vh;
+      min-width: 100vw;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #container {
+      position: relative;
+    }
+
+    #bg {
+      filter: blur(50px) brightness(0.5);
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
+      background-color: black;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      
+      height: 110vh;
+      width: 110vw;
+      pointer-events: none;
+    }
+
+    #info {
+      padding: 20px;
+      border: 5px gray ridge;
+      background-color: black;
+
+      display: flex;
+      align-items: center;
+    }
+
+    #artwork {
+      width: 200px;
+      height: 200px;
+
+      object-fit: cover;
+      object-position: center;
+
+      margin-right: 20px;
+    }
+
+    #info-inner {
+      vertical-align: middle;
+      display: inline-block;
+    }
+
+    #now-playing {
+      text-transform: uppercase;
+      font-weight: bold;
+
+      font-size: 1rem;
+      line-height: 1.3rem;
+    }
+
+    #artist {
+      font-weight: bold;
+    }
+
+    #song {
+      font-size: 1.6rem;
+      line-height: 1.9rem;
+    }
+
+    #release {
+      font-size: 1rem;
+      line-height: 1.3rem;
+    }
+
+    #player {
+      margin-top: 30px;
+      width: 100%;
+    }
+
+    #error {
+      color: #ffafaf;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <div id='bg'></div>
+  <div id='container'>
+    <div id='info'>
+      <img id='artwork' />
+      <div id='info-inner'>
+        <div id='now-playing'>Now Playing</div>
+        <div id='show'></div>
+        <br />
+        <div id='song'><span id='artist'></span> - <span id='title'></span></div>
+        <div id='release'></div>
+        <br />
+        <button id='updateButton'>Update Info</button> <button id='enableNotificationsButton'>Enable Notifications</button>
+        <br />
+        <div id='error'></div>
+      </div>
+    </div>
+    <audio id='player' controls />
+  </div>
+
+<script>
+  const PLACEHOLDER_ARTWORK = 'https://kexp.org/static/assets/img/default.png';
+  const AIR_BREAK = 'Air Break';
+
+  let [
+    player,
+    show,
+    artist,
+    title,
+    release,
+    error,
+    artwork,
+    updateButton,
+    bg,
+    enableNotificationsButton
+  ] = [
+    'player',
+    'show',
+    'artist',
+    'title',
+    'release',
+    'error',
+    'artwork',
+    'updateButton',
+    'bg',
+    'enableNotificationsButton'
+  ].map(e => document.getElementById(e));
+
+  function getStreamURL() {
+    return `https://kexp-mp3-128.streamguys1.com/kexp128.mp3?${Date.now()}`;
+  }
+
+  function getAPIEndpoint(path = '', params = {}) {
+    let searchParams = new URLSearchParams();
+    for (let [k, v] of Object.entries(params)) {
+      searchParams.set(k, v);
+    }
+    return `https://api.kexp.org/v2/${path}?${searchParams.toString()}`;
+  }
+
+  player.src = getStreamURL();
+
+  async function fetchShows() {
+    let res = await fetch(getAPIEndpoint('shows', {
+      format: 'json',
+      limit: 1,
+      start_time_before: new Date().toISOString(),
+    }))
+    return res.json();
+  }
+
+  async function fetchPlays() {
+    let res = await fetch(getAPIEndpoint('plays', {
+      format: 'json',
+      limit: 1,
+      ordering: '-airdate',
+      airdate_before: new Date().toISOString(),
+    }))
+    return res.json();
+  }
+
+  function extractPlayMetadata(play) {
+    let metadata = {
+      title: play.song ?? '',
+      artist: play.artist ?? '',
+      artistUrl: '',
+      artworkUrl: play.thumbnail_uri ?? null,
+      program: '',
+      release: '',
+      airdate: play.airdate != null ? (new Date(play.airdate)) : null,
+      showId: play.show,
+    }
+
+    metadata.airdate = new Date(play.airdate);
+    if (['airbreak', 'Air Break', 'air break'].includes(play.play_type)) {
+      metadata.release = AIR_BREAK;
+    } else {
+      metadata.release = play.album ?? '';
+    }
+
+    return metadata;
+  }
+
+  function extractShowMetadata(show) {
+    let metadata = {
+      showId: show.id,
+      host: show.host_names.join(', '),
+      program: show.program_name,
+      airdate: new Date(show.airdate),
+    }
+
+    return metadata;
+  }
+
+  async function fetchNowPlaying() {
+    let [shows, plays] = await Promise.all([
+      fetchShows(),
+      fetchPlays(),
+    ])
+
+    let show = extractShowMetadata(shows.results[0]);
+    let play = extractPlayMetadata(plays.results[0]);
+
+    let showHeader = `${show.program} with ${show.host}`;
+
+    return {
+      program: show.program,
+      host: show.host,
+      artist: play.artist,
+      title: play.title,
+      release: play.release,
+      artworkUrl: play.artworkUrl
+    }
+  }
+
+  let lastNowPlaying = null;
+  async function updateTitle() {
+    let nowPlaying;
+    try {
+      nowPlaying = await fetchNowPlaying();
+    } catch (err) {
+      error.textContent('Could not fetch show data - check console');
+      return;
+    }
+
+    error.textContent = '';
+    show.textContent = `${nowPlaying.program} with ${nowPlaying.host}`;
+    artist.textContent = nowPlaying.artist;
+    title.textContent = nowPlaying.title;
+    release.textContent = nowPlaying.release;
+    let nowPlayingText;
+    if (nowPlaying.release === AIR_BREAK) {
+      song.style.visibility = 'hidden';
+      nowPlayingText = AIR_BREAK;
+    } else {
+      song.style.visibility = 'shown';
+      nowPlayingText = `${nowPlaying.artist} - ${nowPlaying.title}`;
+    }
+    let artworkUrl = nowPlaying.artworkUrl ?? PLACEHOLDER_ARTWORK;
+    artwork.src = artworkUrl
+    bg.style['background-image'] = `url(${artworkUrl})`;
+    
+    document.title = `KEXP: ${nowPlayingText}`;
+    if (Notification.permission === 'granted') {
+      if (lastNowPlaying === nowPlayingText) return;
+      if (lastNowPlaying === null) {
+        lastNowPlaying = nowPlayingText;
+        return;
+      }
+
+      lastNowPlaying = nowPlayingText;
+      new Notification('KEXP', {
+        body: `Now Playing: ${nowPlayingText}`,
+        icon: artworkUrl
+      })
+    }
+  }
+  setInterval(updateTitle, 1000 * 15);
+  updateTitle();
+
+  updateButton.onclick = updateTitle;
+
+  enableNotificationsButton.onclick = async () => {
+    await Notification.requestPermission();
+  }
+</script>
+
+</body>
