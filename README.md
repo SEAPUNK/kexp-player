@@ -9,3 +9,13 @@ made this because i didnt want to visit kexp's site to use their radio (and i wa
 
 
 https://ivan.moe/kexp/
+
+
+---
+
+eventually (maybe, maybe not)
+
+- play history
+- link to show
+- link to kexp
+- idk
