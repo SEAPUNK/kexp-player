@@ -239,13 +239,23 @@
 
   let lastNowPlaying = null;
   async function updateTitle() {
+    function resetButton() {
+      updateButton.disabled = false;
+      updateButton.innerText = 'Update Info';
+    }
+    
+    updateButton.disabled = true;
+    updateButton.innerText = 'Updating Info...';
+
     let nowPlaying;
     try {
       nowPlaying = await fetchNowPlaying();
     } catch (err) {
+      resetButton();
       error.textContent('Could not fetch show data - check console');
       return;
     }
+    resetButton();
 
     error.textContent = '';
     show.textContent = `${nowPlaying.program} with ${nowPlaying.host}`;
@@ -257,7 +267,7 @@
       song.style.visibility = 'hidden';
       nowPlayingText = AIR_BREAK;
     } else {
-      song.style.visibility = 'shown';
+      song.style.visibility = 'visible';
       nowPlayingText = `${nowPlaying.artist} - ${nowPlaying.title}`;
     }
     let artworkUrl = nowPlaying.artworkUrl || PLACEHOLDER_ARTWORK;
